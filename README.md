@@ -2,6 +2,7 @@
 
 Ce code montre comment écrire une image en BMP sans compression.
 
+**Attention, ce code ne tient pas compte de l'endianness, il présuppose être exécuté sur une plateforme little-endian.**
 
 # Compilation
 
