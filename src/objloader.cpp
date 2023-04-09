@@ -2,8 +2,24 @@
 
 #include <fstream>
 #include <stdexcept>
-#include <regex>
 #include <cfloat>
+
+const std::string OBJLoader::_float_rgx_str = "([+-]?((\\d+([.]\\d*)?)|([.]\\d+))([eE][-+]?\\d+)?)";
+const std::string OBJLoader::_int_rgx_str   = "([+-]?\\d+)";
+
+const std::string OBJLoader::_face_el_100_str = OBJLoader::_int_rgx_str;
+const std::string OBJLoader::_face_el_101_str = OBJLoader::_int_rgx_str + "/{1,2}" + OBJLoader::_int_rgx_str;
+const std::string OBJLoader::_face_el_111_str = OBJLoader::_int_rgx_str + "/" + OBJLoader::_int_rgx_str + "/" + OBJLoader::_int_rgx_str;
+
+const std::regex OBJLoader::_vertex_rgx      ("^v(\\s+" + OBJLoader::_float_rgx_str + "){3,4}\\s*$");
+const std::regex OBJLoader::_face_grp_100_rgx("^f(\\s+" + OBJLoader::_face_el_100_str + "){3,}\\s*$");
+const std::regex OBJLoader::_face_grp_101_rgx("^f(\\s+" + OBJLoader::_face_el_101_str + "){3,}\\s*$");
+const std::regex OBJLoader::_face_grp_111_rgx("^f(\\s+" + OBJLoader::_face_el_111_str + "){3,}\\s*$");
+
+const std::regex OBJLoader::_float_rgx      (OBJLoader::_float_rgx_str);
+const std::regex OBJLoader::_face_el_100_rgx(OBJLoader::_face_el_100_str);
+const std::regex OBJLoader::_face_el_101_rgx(OBJLoader::_face_el_101_str);
+const std::regex OBJLoader::_face_el_111_rgx(OBJLoader::_face_el_111_str);
 
 
 OBJLoader::OBJLoader(const char* filename)
@@ -14,32 +30,19 @@ OBJLoader::OBJLoader(const char* filename)
 {
     std::ifstream file_obj(filename, std::ios::in);
 
-    const std::string float_rgx_str = "([+-]?((\\d+([.]\\d*)?)|([.]\\d+))([eE][-+]?\\d+)?)";
-    const std::string int_rgx_str   = "([+-]?\\d+)";
-
-    const std::regex vertex_rgx("^v(\\s+" + float_rgx_str + "){3,4}\\s*$");
-
-    const std::string face_grp100 = int_rgx_str;
-    const std::string face_grp101 = int_rgx_str + "/{1,2}" + int_rgx_str;
-    const std::string face_grp111 = int_rgx_str + "/" + int_rgx_str + "/" + int_rgx_str;
-
-    const std::regex face_grp100_rgx("^f(\\s+" + face_grp100 + "){3,}\\s*$");
-    const std::regex face_grp101_rgx("^f(\\s+" + face_grp101 + "){3,}\\s*$");
-    const std::regex face_grp111_rgx("^f(\\s+" + face_grp111 + "){3,}\\s*$");
-
     if (file_obj.is_open()) {
 
         std::string line;
         std::smatch matches;
 
         while (std::getline(file_obj, line)) {
-            if (std::regex_match(line, matches, vertex_rgx)) {
+            if (std::regex_match(line, matches, _vertex_rgx)) {
                 read_vertex(line);
-            } else if (std::regex_match(line, matches, face_grp100_rgx)) {
+            } else if (std::regex_match(line, matches, _face_grp_100_rgx)) {
                 read_face_100(line);
-            } else if (std::regex_match(line, matches, face_grp101_rgx)) {
+            } else if (std::regex_match(line, matches, _face_grp_101_rgx)) {
                 read_face_101(line);
-            } else if (std::regex_match(line, matches, face_grp111_rgx)) {
+            } else if (std::regex_match(line, matches, _face_grp_111_rgx)) {
                 read_face_111(line);
             }
         }
@@ -66,14 +69,12 @@ OBJLoader::OBJLoader(const char* filename)
 
 void OBJLoader::read_vertex(const std::string& str)
 {
-    const std::regex float_rgx("([+-]?((\\d+([.]\\d*)?)|([.]\\d+))([eE][-+]?\\d+)?)");
-
     std::string search_str = str;    
     std::smatch matches;
 
     Pnt3D pnt = {0., 0., 0., 1.};
 
-    for (int i = 0; std::regex_search(search_str, matches, float_rgx); i++) {
+    for (int i = 0; std::regex_search(search_str, matches, _float_rgx); i++) {
         (&pnt.x)[i] = std::stof(matches[0]);
         search_str = matches.suffix().str();
     }
@@ -89,21 +90,22 @@ void OBJLoader::read_vertex(const std::string& str)
 
 void OBJLoader::read_face_100(const std::string& str)
 {
-    const std::regex face_grp("([+-]?\\d+)");
-
     std::string search_str = str;
     std::smatch matches;
 
     _index_buffer.resize(_index_buffer.size() + 1);
     std::vector<int>& current_polygon = _index_buffer.back();
 
-    while (std::regex_search(search_str, matches, face_grp)) {
+    while (std::regex_search(search_str, matches, _face_el_100_rgx)) {
         const int vertex_idx = std::stoi(matches[0]);
 
-        if (vertex_idx > 0) {
+        if (vertex_idx > 0 && vertex_idx <= _vertex_buffer.size()) {
             current_polygon.push_back(vertex_idx - 1);
+        } else if ((int)_vertex_buffer.size() - vertex_idx >= 0 
+                && (int)_vertex_buffer.size() - vertex_idx < _vertex_buffer.size()) {
+            current_polygon.push_back((int)_vertex_buffer.size() - vertex_idx);
         } else {
-            current_polygon.push_back(_vertex_buffer.size() - vertex_idx);
+            std::runtime_error("Malformed OBJ file");
         }
 
         search_str = matches.suffix().str();
@@ -113,22 +115,22 @@ void OBJLoader::read_face_100(const std::string& str)
 
 void OBJLoader::read_face_101(const std::string& str)
 {
-    const std::string int_rgx_str   = "([+-]?\\d+)";
-    const std::regex face_grp(int_rgx_str + "/{1,2}" + int_rgx_str);
-
     std::string search_str = str;
     std::smatch matches;
 
     _index_buffer.resize(_index_buffer.size() + 1);
     std::vector<int>& current_polygon = _index_buffer.back();
 
-    while (std::regex_search(search_str, matches, face_grp)) {
+    while (std::regex_search(search_str, matches, _face_el_101_rgx)) {
         const int vertex_idx = std::stoi(matches[1]);
 
-        if (vertex_idx > 0) {
+        if (vertex_idx > 0 && vertex_idx <= _vertex_buffer.size()) {
             current_polygon.push_back(vertex_idx - 1);
+        } else if ((int)_vertex_buffer.size() - vertex_idx >= 0 
+                && (int)_vertex_buffer.size() - vertex_idx < _vertex_buffer.size()) {
+            current_polygon.push_back((int)_vertex_buffer.size() - vertex_idx);
         } else {
-            current_polygon.push_back(_vertex_buffer.size() - vertex_idx);
+            std::runtime_error("Malformed OBJ file");
         }
 
         search_str = matches.suffix().str();
@@ -138,23 +140,22 @@ void OBJLoader::read_face_101(const std::string& str)
 
 void OBJLoader::read_face_111(const std::string& str)
 {
-    const std::string int_rgx_str   = "([+-]?\\d+)";
-
-    const std::regex face_grp(int_rgx_str + "/" + int_rgx_str + "/" + int_rgx_str);
-
     std::string search_str = str;
     std::smatch matches;
 
     _index_buffer.resize(_index_buffer.size() + 1);
     std::vector<int>& current_polygon = _index_buffer.back();
 
-    while (std::regex_search(search_str, matches, face_grp)) {
+    while (std::regex_search(search_str, matches, _face_el_111_rgx)) {
         const int vertex_idx = std::stoi(matches[1]);
 
-        if (vertex_idx > 0) {
+        if (vertex_idx > 0 && vertex_idx <= _vertex_buffer.size()) {
             current_polygon.push_back(vertex_idx - 1);
+        } else if ((int)_vertex_buffer.size() - vertex_idx >= 0 
+                && (int)_vertex_buffer.size() - vertex_idx < _vertex_buffer.size()) {
+            current_polygon.push_back((int)_vertex_buffer.size() - vertex_idx);
         } else {
-            current_polygon.push_back(_vertex_buffer.size() - vertex_idx);
+            std::runtime_error("Malformed OBJ file");
         }
 
         search_str = matches.suffix().str();

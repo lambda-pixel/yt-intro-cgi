@@ -2,9 +2,12 @@
 #include <cstdint>
 #include <cstring>
 
-#include "bitmap.h"
+#include <SDL.h>
+
 #include "draw.h"
 #include "objloader.h"
+
+#include "SDLTexture.h"
 
 
 Pnt3D translate_xy(const Pnt3D& pnt, float translate_x, float translate_y)
@@ -37,19 +40,37 @@ int main(int argc, char* argv[])
 
     const OBJLoader loader(argv[1]);
 
-    // Specification de la taille de l'image
     const uint32_t width = 1000;
     const uint32_t height = 600;
 
-    // Creation de l'image / framebuffer
-    BMP_Color *framebuffer = new BMP_Color[width * height];
-    std::memset(framebuffer, 0, sizeof(BMP_Color) * width * height);
+    SDL_Window *window = nullptr;
+    SDL_Renderer *renderer = nullptr;
 
-    const BMP_Color line_color = {
-        .b = 0,
-        .g = 255,
-        .r = 0
-    };
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s", SDL_GetError());
+        return -1;
+    }
+
+    window = SDL_CreateWindow(
+        argv[1],
+        SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED,
+        width, height,
+        0
+    );
+
+    renderer = SDL_CreateRenderer(window, -1, 0);
+
+    if (window == nullptr || renderer == nullptr) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not create window and renderer %s", SDL_GetError());
+        return -1;
+    }
+
+    SDLTexture texture(renderer, width, height);
+
+    bool quit = false;
+
+    const Color line_color = {255, 255, 0};
 
     const std::vector<Pnt3D>& vertices = loader.vertices();
     const BBox bbox = loader.getBBox();
@@ -84,17 +105,47 @@ int main(int argc, char* argv[])
             const Pnt3D s1_img = translate_xy(scale(s1_ndc, scaling_img), translate_img_x, translate_img_y);
 
             trace_line(
-                framebuffer, width, height, line_color,
-                s0_img.x, s0_img.y,
-                s1_img.x, s1_img.y
+                texture, 
+                width, height, 
+                line_color,
+                (int)std::round(s0_img.x), (int)std::round(height - 1 - s0_img.y),
+                (int)std::round(s1_img.x), (int)std::round(height - 1 - s1_img.y)
             );
         }
     }
 
-    // Enregistrement de l'image
-    save_bmp("test.bmp", framebuffer, width, height);
+    while (!quit) {
+        SDL_RenderClear(renderer);
 
-    delete[] framebuffer;
+        SDL_Event event;
+
+        while (SDL_PollEvent(&event) != 0) {
+            switch (event.type)
+            {
+            case SDL_QUIT:
+                quit = true;
+                break;
+
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                    case SDLK_F12:
+                        texture.save("screen.bmp");
+                        break;
+                    default:
+                        break;
+                }
+            default:
+                break;
+            }
+        }
+
+        texture.refresh();
+
+        SDL_RenderPresent(renderer);
+    }
+
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return 0;
 }

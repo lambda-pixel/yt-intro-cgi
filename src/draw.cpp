@@ -4,9 +4,9 @@
 #include <algorithm>
 
 void trace_line(
-    BMP_Color framebuffer[],
+    Texture& texture,
     uint32_t width, uint32_t height,
-    BMP_Color line_color,
+    Color line_color,
     int x_start, int y_start,
     int x_end, int y_end)
 {
@@ -35,8 +35,8 @@ void trace_line(
         const int D_inc_2 = 2 * (dy - dx);
 
         for (int x = x_start; x <= x_end; x++) {
-            if (x >= 0 && x < width && y >= 0 && y < height) {
-                framebuffer[y * width + x] = line_color;
+            if (x >= 0 && x < (int)width && y >= 0 && y < (int)height) {
+                texture.put_pixel(x, y, line_color);
             }
 
             if (D < 0) {
@@ -68,8 +68,8 @@ void trace_line(
         const int D_inc_2 = 2 * (dx - dy);
 
         for (int y = y_start; y <= y_end; y++) {
-            if (x >= 0 && x < width && y >= 0 && y < height) {
-                framebuffer[y * width + x] = line_color;
+            if (x >= 0 && x < (int)width && y >= 0 && y < (int)height) {
+                texture.put_pixel(x, y, line_color);
             }
 
             if (D < 0) {
@@ -84,9 +84,9 @@ void trace_line(
 
 
 void trace_line_dda(
-    BMP_Color framebuffer[],
+    Texture& texture,
     uint32_t width, uint32_t height,
-    BMP_Color line_color,
+    Color line_color,
     int x_start, int y_start,
     int x_end, int y_end)
 {
@@ -101,10 +101,10 @@ void trace_line_dda(
         float var_y = 0;
 
         for (int x = x_start; x <= x_end; x++) {
-            int y = std::round((float)y_start + var_y);
+            int y = (int)std::round((float)y_start + var_y);
 
-            if (x >= 0 && x < width && y >= 0 && y < height) {
-                framebuffer[y * width + x] = line_color;
+            if (x >= 0 && x < (int)width && y >= 0 && y < (int)height) {
+                texture.put_pixel(x, y, line_color);
             }
 
             var_y += dy;
@@ -120,10 +120,10 @@ void trace_line_dda(
         float var_x = 0;
 
         for (int y = y_start; y <= y_end; y++) {
-            int x = std::round((float)x_start + var_x);
+            int x = (int)std::round((float)x_start + var_x);
 
-            if (x >= 0 && x < width && y >= 0 && y < height) {
-                framebuffer[y * width + x] = line_color;
+            if (x >= 0 && x < (int)width && y >= 0 && y < (int)height) {
+                texture.put_pixel(x, y, line_color);
             }
 
             var_x += dx;

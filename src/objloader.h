@@ -2,18 +2,9 @@
 
 #include <vector>
 #include <string>
+#include <regex>
 
-
-struct Pnt3D {
-    float x, y, z, w;
-};
-
-
-struct BBox {
-    Pnt3D min;
-    Pnt3D max;
-};
-
+#include <geom.h>
 
 class OBJLoader
 {
@@ -34,4 +25,21 @@ private:
     std::vector<std::vector<int>> _index_buffer;
 
     BBox _bbox;
+
+    static const std::string _float_rgx_str;
+    static const std::string _int_rgx_str;
+
+    static const std::string _face_el_100_str;
+    static const std::string _face_el_101_str;
+    static const std::string _face_el_111_str;
+
+    static const std::regex _vertex_rgx;
+    static const std::regex _face_grp_100_rgx;
+    static const std::regex _face_grp_101_rgx;
+    static const std::regex _face_grp_111_rgx;
+
+    static const std::regex _float_rgx;
+    static const std::regex _face_el_100_rgx;
+    static const std::regex _face_el_101_rgx;
+    static const std::regex _face_el_111_rgx;
 };
