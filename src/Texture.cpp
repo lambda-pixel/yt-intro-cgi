@@ -20,6 +20,16 @@ void Texture::refresh()
     
 }
 
+
+void Texture::clear()
+{
+    std::memset(
+        _framebuffer.data(),
+        0,
+        _framebuffer.size() * sizeof(uint8_t));
+}
+
+
 void Texture::put_pixel(int x, int y, Color c)
 {
     if (x >= 0  && x < _width && y >= 0 && y < _height) {

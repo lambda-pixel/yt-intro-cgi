@@ -20,13 +20,80 @@ Pnt3D translate_xy(const Pnt3D& pnt, float translate_x, float translate_y)
 }
 
 
-Pnt3D scale(const Pnt3D& pnt, float scale) {
+Pnt3D scale(const Pnt3D& pnt, float scale)
+{
     return {
         pnt.x * scale,
         pnt.y * scale,
         pnt.z * scale
     };
 }
+
+
+Pnt3D rotate_x(const Pnt3D& pnt, float angle_deg)
+{
+    const float angle_rad = angle_deg * M_PI/180.f;
+
+    const float cos_angle = std::cos(angle_rad);
+    const float sin_angle = std::sin(angle_rad);
+
+    return {
+        pnt.x,
+        pnt.y * cos_angle - pnt.z * sin_angle,
+        pnt.y * sin_angle + pnt.z * cos_angle,
+    };
+}
+
+
+Pnt3D rotate_y(const Pnt3D& pnt, float angle_deg)
+{
+    const float angle_rad = angle_deg * M_PI/180.f;
+
+    const float cos_angle = std::cos(angle_rad);
+    const float sin_angle = std::sin(angle_rad);
+
+    return {
+        pnt.z * sin_angle + pnt.x * cos_angle,
+        pnt.y,
+        pnt.z * cos_angle - pnt.x * sin_angle,
+    };
+}
+
+
+Pnt3D rotate_z(const Pnt3D& pnt, float angle_deg)
+{
+    const float angle_rad = angle_deg * M_PI/180.f;
+
+    const float cos_angle = std::cos(angle_rad);
+    const float sin_angle = std::sin(angle_rad);
+
+    return {
+        pnt.x * cos_angle - pnt.y * sin_angle,
+        pnt.x * sin_angle + pnt.y * cos_angle,
+        pnt.z
+    };
+}
+
+
+void trace_lines_on_texture(
+    const std::vector<std::pair<Pnt3D, Pnt3D>>& lines,
+    const Color& line_color,
+    Texture& texture)
+{
+    const int width  = texture.width();
+    const int height = texture.height();
+
+    for (const auto& edge: lines) {
+        trace_line(
+            texture, 
+            width, height, 
+            line_color,
+            (int)std::round(edge.first.x), (int)std::round(height - 1 - edge.first.y),
+            (int)std::round(edge.second.x), (int)std::round(height - 1 - edge.second.y)
+        );       
+    }
+}
+
 
 
 int main(int argc, char* argv[])
@@ -75,6 +142,8 @@ int main(int argc, char* argv[])
     const std::vector<Pnt3D>& vertices = loader.vertices();
     const BBox bbox = loader.getBBox();
 
+    std::vector<std::pair<Pnt3D, Pnt3D>> lines;
+
     for (const std::vector<int>& face: loader.polygons()) {
         for (size_t i = 0; i < face.size(); i++) {
             const Pnt3D& s0 = vertices[face[i]];
@@ -104,15 +173,11 @@ int main(int argc, char* argv[])
             const Pnt3D s0_img = translate_xy(scale(s0_ndc, scaling_img), translate_img_x, translate_img_y);
             const Pnt3D s1_img = translate_xy(scale(s1_ndc, scaling_img), translate_img_x, translate_img_y);
 
-            trace_line(
-                texture, 
-                width, height, 
-                line_color,
-                (int)std::round(s0_img.x), (int)std::round(height - 1 - s0_img.y),
-                (int)std::round(s1_img.x), (int)std::round(height - 1 - s1_img.y)
-            );
+            lines.push_back(std::make_pair(s0_img, s1_img));
         }
     }
+
+    trace_lines_on_texture(lines, line_color, texture);
 
     while (!quit) {
         SDL_RenderClear(renderer);
@@ -131,6 +196,75 @@ int main(int argc, char* argv[])
                     case SDLK_F12:
                         texture.save("screen.bmp");
                         break;
+
+                    case SDLK_LEFT:
+                        texture.clear();
+
+                        for (auto& edge: lines) {
+                            edge.first  = translate_xy(edge.first , -(float)width/2.f, -(float)height / 2.f); 
+                            edge.second = translate_xy(edge.second, -(float)width/2.f, -(float)height / 2.f); 
+
+                            edge.first  = rotate_y(edge.first , 1.f);
+                            edge.second = rotate_y(edge.second, 1.f);
+
+                            edge.first  = translate_xy(edge.first , (float)width/2.f, (float)height / 2.f); 
+                            edge.second = translate_xy(edge.second, (float)width/2.f, (float)height / 2.f); 
+                        }
+
+                        trace_lines_on_texture(lines, line_color, texture);
+                        break;
+
+                    case SDLK_RIGHT:
+                        texture.clear();
+
+                        for (auto& edge: lines) {
+                            edge.first  = translate_xy(edge.first , -(float)width/2.f, -(float)height / 2.f); 
+                            edge.second = translate_xy(edge.second, -(float)width/2.f, -(float)height / 2.f); 
+
+                            edge.first  = rotate_y(edge.first , -1.f);
+                            edge.second = rotate_y(edge.second, -1.f);
+
+                            edge.first  = translate_xy(edge.first , (float)width/2.f, (float)height / 2.f); 
+                            edge.second = translate_xy(edge.second, (float)width/2.f, (float)height / 2.f); 
+                        }
+
+                        trace_lines_on_texture(lines, line_color, texture);
+                        break;
+
+                    case SDLK_DOWN:
+                        texture.clear();
+
+                        for (auto& edge: lines) {
+                            edge.first  = translate_xy(edge.first , -(float)width/2.f, -(float)height / 2.f); 
+                            edge.second = translate_xy(edge.second, -(float)width/2.f, -(float)height / 2.f); 
+
+                            edge.first  = rotate_x(edge.first , 1.f);
+                            edge.second = rotate_x(edge.second, 1.f);
+
+                            edge.first  = translate_xy(edge.first , (float)width/2.f, (float)height / 2.f); 
+                            edge.second = translate_xy(edge.second, (float)width/2.f, (float)height / 2.f); 
+                        }
+
+                        trace_lines_on_texture(lines, line_color, texture);
+                        break;
+
+                    case SDLK_UP:
+                        texture.clear();
+
+                        for (auto& edge: lines) {
+                            edge.first  = translate_xy(edge.first , -(float)width/2.f, -(float)height / 2.f); 
+                            edge.second = translate_xy(edge.second, -(float)width/2.f, -(float)height / 2.f); 
+
+                            edge.first  = rotate_x(edge.first , -1.f);
+                            edge.second = rotate_x(edge.second, -1.f);
+
+                            edge.first  = translate_xy(edge.first , (float)width/2.f, (float)height / 2.f); 
+                            edge.second = translate_xy(edge.second, (float)width/2.f, (float)height / 2.f); 
+                        }
+
+                        trace_lines_on_texture(lines, line_color, texture);
+                        break;
+
                     default:
                         break;
                 }

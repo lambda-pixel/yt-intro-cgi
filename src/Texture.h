@@ -14,6 +14,7 @@ public:
     Texture(int width, int height);
 
     virtual void refresh();
+    virtual void clear();
 
     virtual void put_pixel(int x, int y, Color c);
     virtual Color get_pixel(int x, int y) const;
