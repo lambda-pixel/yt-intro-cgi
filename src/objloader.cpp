@@ -72,7 +72,7 @@ void OBJLoader::read_vertex(const std::string& str)
     std::string search_str = str;    
     std::smatch matches;
 
-    Pnt3D pnt = {0., 0., 0., 1.};
+    vec4 pnt;
 
     for (int i = 0; std::regex_search(search_str, matches, _float_rgx); i++) {
         (&pnt.x)[i] = std::stof(matches[0]);

@@ -11,7 +11,7 @@ class OBJLoader
 public:
     OBJLoader(const char* filename);
 
-    const std::vector<Pnt3D>& vertices() const { return _vertex_buffer; }
+    const std::vector<vec4>& vertices() const { return _vertex_buffer; }
     const std::vector<std::vector<int>>& polygons() const { return _index_buffer; }
     BBox getBBox() const { return _bbox; }
 
@@ -21,7 +21,7 @@ private:
     void read_face_101(const std::string& str);
     void read_face_111(const std::string& str);
 
-    std::vector<Pnt3D>            _vertex_buffer;
+    std::vector<vec4>            _vertex_buffer;
     std::vector<std::vector<int>> _index_buffer;
 
     BBox _bbox;

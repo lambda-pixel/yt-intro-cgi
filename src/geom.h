@@ -1,11 +1,8 @@
 #pragma once
 
-struct Pnt3D {
-    float x, y, z, w;
-};
-
+#include "matrix.hpp"
 
 struct BBox {
-    Pnt3D min;
-    Pnt3D max;
+    vec4 min;
+    vec4 max;
 };
